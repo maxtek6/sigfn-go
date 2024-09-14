@@ -43,6 +43,7 @@ func signalHook(signum C.int) {
 	handler(signal)
 }
 
+// Handle a signal using the handler function
 func Handle(signum syscall.Signal, handler func(syscall.Signal)) error {
 	handlerMap[signum] = handler
 	err := signal(signum, hookType)
@@ -52,6 +53,7 @@ func Handle(signum syscall.Signal, handler func(syscall.Signal)) error {
 	return nil
 }
 
+// Ignore a signal
 func Ignore(signum syscall.Signal) error {
 	delete(handlerMap, signum)
 	err := signal(signum, ignoreType)
@@ -61,6 +63,7 @@ func Ignore(signum syscall.Signal) error {
 	return nil
 }
 
+// Reset a signal to its default behavior
 func Reset(signum syscall.Signal) error {
 	delete(handlerMap, signum)
 	err := signal(signum, resetType)
