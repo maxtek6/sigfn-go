@@ -3,7 +3,7 @@ module github.com/maxtek6/sigfn-go
 go 1.23.0
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	modernc.org/libc v1.61.2
 )
 
