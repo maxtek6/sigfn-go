@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/stretchr/testify v1.10.0
-	modernc.org/libc v1.61.11
+	modernc.org/libc v1.61.12
 )
 
 require (
