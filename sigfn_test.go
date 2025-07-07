@@ -21,61 +21,59 @@
 package sigfn
 
 import (
+	"context"
+	"os"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHandleIgnore(t *testing.T) {
-	currentSignum := syscall.Signal(0)
+func signalRaise(signum syscall.Signal) {
+	syscall.Kill(os.Getpid(), signum)
+}
 
-	handler := func(signum syscall.Signal) {
-		currentSignum = signum
+func collectSignal(sigChan chan os.Signal) (os.Signal, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*50)
+	defer cancel()
+	select {
+	case sig := <-sigChan:
+		return sig, true
+	case <-ctx.Done():
+		return nil, false
 	}
-	err := Handle(syscall.SIGINT, handler)
-	assert.NoError(t, err)
-
+}
+func TestHandleIgnore(t *testing.T) {
+	sigChan := make(chan os.Signal)
+	Handle(syscall.SIGINT, func(sig os.Signal) {
+		sigChan <- sig
+	})
 	signalRaise(syscall.SIGINT)
-	assert.Equal(t, currentSignum, syscall.SIGINT)
+	sig, ok := collectSignal(sigChan)
+	assert.Equal(t, sig.String(), syscall.SIGINT.String())
+	assert.True(t, ok)
 
-	currentSignum = syscall.Signal(0)
-
-	err = Ignore(syscall.SIGINT)
-	assert.NoError(t, err)
-
+	Ignore(syscall.SIGINT)
 	signalRaise(syscall.SIGINT)
-	assert.Zero(t, currentSignum)
+	sig, ok = collectSignal(sigChan)
+	assert.Nil(t, sig)
+	assert.False(t, ok)
 }
 
 func TestHandleReset(t *testing.T) {
-	currentSignum := syscall.Signal(0)
-
-	handler := func(signum syscall.Signal) {
-		currentSignum = signum
-	}
-	err := Handle(syscall.SIGCHLD, handler)
-	assert.NoError(t, err)
-
+	sigChan := make(chan os.Signal)
+	Handle(syscall.SIGCHLD, func(sig os.Signal) {
+		sigChan <- sig
+	})
 	signalRaise(syscall.SIGCHLD)
-	assert.Equal(t, currentSignum, syscall.SIGCHLD)
+	sig, ok := collectSignal(sigChan)
+	assert.Equal(t, sig.String(), syscall.SIGCHLD.String())
+	assert.True(t, ok)
 
-	currentSignum = syscall.Signal(0)
-
-	err = Reset(syscall.SIGCHLD)
-	assert.NoError(t, err)
-
+	Reset(syscall.SIGCHLD)
 	signalRaise(syscall.SIGCHLD)
-	assert.Zero(t, currentSignum, syscall.SIGCHLD)
-}
-
-func TestErrors(t *testing.T) {
-	badSignum := syscall.Signal(-1)
-	cb := func(signum syscall.Signal) {}
-	err := Handle(badSignum, cb)
-	assert.Error(t, err)
-	err = Ignore(badSignum)
-	assert.Error(t, err)
-	err = Reset(badSignum)
-	assert.Error(t, err)
+	sig, ok = collectSignal(sigChan)
+	assert.Nil(t, sig)
+	assert.False(t, ok)
 }

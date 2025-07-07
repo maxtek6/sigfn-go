@@ -21,54 +21,70 @@
 package sigfn
 
 import (
-	"fmt"
-	"syscall"
+	"os"
+	"os/signal"
+	"sync"
 
 	_ "modernc.org/libc"
 )
 
-/*
-	void signalHook(int);
-*/
-import "C"
-
 var (
-	handlerMap = map[syscall.Signal]func(syscall.Signal){}
+	table      *signalTable
+	once       sync.Once
+	bufferSize = 1
 )
 
-//export signalHook
-func signalHook(signum C.int) {
-	signal := syscall.Signal(signum)
-	handler := handlerMap[signal]
-	handler(signal)
+type signalTable struct {
+	handlerMap map[os.Signal]func(os.Signal)
+	sigChan    chan os.Signal
+}
+
+func getTable() *signalTable {
+	once.Do(func() {
+		// Initialize the signal table or any other necessary setup
+		table = &signalTable{
+			handlerMap: map[os.Signal]func(os.Signal){},
+			sigChan:    make(chan os.Signal, bufferSize),
+		}
+		go table.mainLoop()
+	})
+	return table
+}
+
+func (s *signalTable) mainLoop() {
+	for {
+		sig := <-s.sigChan
+		if handler, ok := s.handlerMap[sig]; ok {
+			handler(sig)
+		}
+	}
+}
+
+func (s *signalTable) addHandler(signum os.Signal, handler func(os.Signal)) {
+	signal.Notify(s.sigChan, signum)
+	s.handlerMap[signum] = handler
+}
+
+func (s *signalTable) removeHandler(signum os.Signal) {
+	delete(s.handlerMap, signum)
 }
 
 // Handle a signal using the handler function
-func Handle(signum syscall.Signal, handler func(syscall.Signal)) error {
-	handlerMap[signum] = handler
-	err := signal(signum, hookType)
-	if err != nil {
-		return fmt.Errorf("sigfn.Handle: %v", err)
-	}
+func Handle(signum os.Signal, handler func(os.Signal)) error {
+	getTable().addHandler(signum, handler)
 	return nil
 }
 
 // Ignore a signal
-func Ignore(signum syscall.Signal) error {
-	delete(handlerMap, signum)
-	err := signal(signum, ignoreType)
-	if err != nil {
-		return fmt.Errorf("sigfn.Ignore: %v", err)
-	}
+func Ignore(signum os.Signal) error {
+	getTable().removeHandler(signum)
+	signal.Ignore(signum)
 	return nil
 }
 
 // Reset a signal to its default behavior
-func Reset(signum syscall.Signal) error {
-	delete(handlerMap, signum)
-	err := signal(signum, resetType)
-	if err != nil {
-		return fmt.Errorf("sigfn.Reset: %v", err)
-	}
+func Reset(signum os.Signal) error {
+	getTable().removeHandler(signum)
+	signal.Reset(signum)
 	return nil
 }

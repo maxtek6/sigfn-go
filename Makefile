@@ -24,7 +24,7 @@ CODE_COVERAGE_HEADER    = "**************************** CODE COVERAGE **********
 BUILD_EXAMPLE_HEADER    = "**************************** BUILD EXAMPLE *****************************" 
 
 .PHONY: all
-all: lint test
+all: lint test build
 
 .PHONY: test
 test: unit cover
@@ -50,3 +50,8 @@ lint:
 .PHONY: clean
 clean:
 	rm -rf coverage.out
+
+.PHONY: build
+build:
+	@echo $(BUILD_EXAMPLE_HEADER)
+	go build -o bin/ _example/pause.go
