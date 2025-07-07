@@ -24,8 +24,6 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-
-	_ "modernc.org/libc"
 )
 
 var (
