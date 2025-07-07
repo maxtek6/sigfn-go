@@ -70,21 +70,18 @@ func (s *signalTable) removeHandler(signum os.Signal) {
 }
 
 // Handle a signal using the handler function
-func Handle(signum os.Signal, handler func(os.Signal)) error {
+func Handle(signum os.Signal, handler func(os.Signal)) {
 	getTable().addHandler(signum, handler)
-	return nil
 }
 
 // Ignore a signal
-func Ignore(signum os.Signal) error {
+func Ignore(signum os.Signal) {
 	getTable().removeHandler(signum)
 	signal.Ignore(signum)
-	return nil
 }
 
 // Reset a signal to its default behavior
-func Reset(signum os.Signal) error {
+func Reset(signum os.Signal) {
 	getTable().removeHandler(signum)
 	signal.Reset(signum)
-	return nil
 }
