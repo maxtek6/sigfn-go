@@ -31,7 +31,7 @@ import (
 )
 
 func signalRaise(signum syscall.Signal) {
-	syscall.Kill(os.Getpid(), signum)
+	_ = syscall.Kill(os.Getpid(), signum)
 }
 
 func collectSignal(sigChan chan os.Signal) (os.Signal, bool) {
